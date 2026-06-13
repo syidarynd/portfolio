@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Arya — Perekam Medis & Pengembang Produk Digital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Epilogue:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#0D1117;--bg2:#131920;--surface:#1A2332;--surface2:#1F2D3D;
+      --border:rgba(56,189,148,0.15);--border2:rgba(56,189,148,0.3);
+      --primary:#38BD94;--primary-d:#2A9575;--accent:#64F4C2;
+      --text:#E8F0E9;--muted:#7A9B8A;--tag-bg:rgba(56,189,148,0.12);--tag-text:#64F4C2;
+      --radius:14px;--radius-sm:8px;
+      --font-display:'Syne',sans-serif;--font-body:'Epilogue',sans-serif;
+    }
+    [data-theme="light"]{
+      --bg:#F5F7F5;--bg2:#EAEDE9;--surface:#FFFFFF;--surface2:#F0F4F1;
+      --border:rgba(10,77,60,0.12);--border2:rgba(10,77,60,0.25);
+      --primary:#0A4D3C;--primary-d:#083D30;--accent:#1D9E75;
+      --text:#0F1A13;--muted:#4D7060;--tag-bg:#E1F5EE;--tag-text:#0F6E56;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--font-body);background:var(--bg);color:var(--text);font-size:16px;line-height:1.7;transition:background .3s,color .3s}
+    a{color:inherit;text-decoration:none}
+
+    /* ---- OVERLAY SCREENS ---- */
+    #auth-screen,#admin-screen{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto}
+    #auth-screen.active,#admin-screen.active{display:block}
+
+    /* AUTH */
+    .auth-wrap{max-width:420px;margin:80px auto;padding:0 1.5rem}
+    .auth-logo{font-family:var(--font-display);font-weight:800;font-size:1.4rem;color:var(--primary);margin-bottom:2rem}
+    .auth-title{font-family:var(--font-display);font-size:1.6rem;font-weight:700;margin-bottom:.5rem}
+    .auth-sub{color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+    .auth-tabs{display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden}
+    .auth-tab{flex:1;padding:9px;font-size:.85rem;font-weight:500;font-family:var(--font-display);background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all .2s}
+    .auth-tab.active{background:var(--primary);color:#fff}
+    .form-group{margin-bottom:1rem}
+    .form-group label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:5px;font-weight:500}
+    .form-group input{width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.9rem;font-family:var(--font-body);transition:border-color .2s}
+    .form-group input:focus{outline:none;border-color:var(--primary)}
+    .btn-full{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:var(--font-display);cursor:pointer;transition:background .2s,transform .15s}
+    .btn-full:hover{background:var(--primary-d);transform:translateY(-1px)}
+    .auth-msg{margin-top:1rem;padding:10px 14px;border-radius:var(--radius-sm);font-size:.85rem;display:none}
+    .auth-msg.error{background:rgba(220,53,69,.12);border:1px solid rgba(220,53,69,.3);color:#f87171;display:block}
+    .auth-msg.success{background:rgba(56,189,148,.12);border:1px solid var(--border2);color:var(--accent);display:block}
+
+    /* ADMIN PANEL */
+    .admin-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:10}
+    .admin-nav-logo{font-family:var(--font-display);font-weight:800;color:var(--primary);font-size:1rem}
+    .admin-nav-right{display:flex;align-items:center;gap:10px}
+    .btn-sm{padding:6px 14px;font-size:.8rem;font-weight:500;font-family:var(--font-display);border-radius:99px;cursor:pointer;transition:all .2s;border:1px solid var(--border2);background:transparent;color:var(--text)}
+    .btn-sm:hover{border-color:var(--primary);color:var(--primary)}
+    .btn-sm.danger{border-color:rgba(220,53,69,.4);color:#f87171}
+    .btn-sm.danger:hover{background:rgba(220,53,69,.1)}
+    .btn-sm.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn-sm.primary:hover{background:var(--primary-d)}
+
+    .admin-body{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+    .admin-tabs{display:flex;gap:4px;margin-bottom:2rem;flex-wrap:wrap}
+    .admin-tab{padding:7px 16px;font-size:.82rem;font-weight:500;font-family:var(--font-display);border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s}
+    .admin-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .admin-section{display:none}
+    .admin-section.active{display:block}
+    .admin-section-title{font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;color:var(--text)}
+
+    .field-group{margin-bottom:1rem}
+    .field-group label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px;font-weight:500;letter-spacing:.03em}
+    .field-group input,.field-group textarea,.field-group select{width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.875rem;font-family:var(--font-body);transition:border-color .2s;resize:vertical}
+    .field-group input:focus,.field-group textarea:focus{outline:none;border-color:var(--primary)}
+    .field-group textarea{min-height:80px}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:540px){.field-row{grid-template-columns:1fr}}
+
+    .card-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;margin-bottom:.75rem;position:relative}
+    .card-item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+    .card-item-title{font-weight:600;font-size:.9rem;font-family:var(--font-display)}
+    .card-item-sub{font-size:.8rem;color:var(--muted)}
+    .card-item-actions{display:flex;gap:6px;flex-shrink:0}
+    .icon-btn{width:30px;height:30px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .icon-btn:hover{border-color:var(--primary);color:var(--primary)}
+    .icon-btn.del:hover{border-color:rgba(220,53,69,.4);color:#f87171}
+
+    .add-card{background:var(--surface);border:1px dashed var(--border2);border-radius:var(--radius);padding:1.25rem;margin-top:1rem}
+    .add-card-title{font-family:var(--font-display);font-size:.85rem;font-weight:600;margin-bottom:1rem;color:var(--accent)}
+    .btn-save{margin-top:.75rem;padding:9px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.85rem;font-weight:600;font-family:var(--font-display);cursor:pointer;transition:all .2s}
+    .btn-save:hover{background:var(--primary-d);transform:translateY(-1px)}
+    .btn-cancel{margin-top:.75rem;margin-left:8px;padding:9px 20px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.85rem;font-weight:500;font-family:var(--font-display);cursor:pointer;transition:all .2s}
+
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 18px;font-size:.85rem;color:var(--accent);z-index:999;opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none}
+    .toast.show{opacity:1;transform:translateY(0)}
+
+    .upload-area{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:1.5rem;text-align:center;cursor:pointer;transition:border-color .2s;position:relative}
+    .upload-area:hover{border-color:var(--primary)}
+    .upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .upload-area p{font-size:.82rem;color:var(--muted)}
+    .upload-area strong{color:var(--accent);font-size:.85rem}
+    .foto-preview{width:80px;height:96px;border-radius:10px;object-fit:cover;border:1px solid var(--border2);margin-bottom:8px}
+
+    /* ---- NAVBAR ---- */
+    nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.8);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 2rem;transition:background .3s}
+    [data-theme="light"] nav{background:rgba(245,247,245,.85)}
+    .nav-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:62px}
+    .nav-logo{font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--primary);letter-spacing:-.02em}
+    .nav-links{display:flex;align-items:center;gap:2rem;list-style:none}
+    .nav-links a{font-size:.85rem;color:var(--muted);transition:color .2s;letter-spacing:.02em}
+    .nav-links a:hover{color:var(--text)}
+    .nav-right{display:flex;align-items:center;gap:10px}
+    .nav-cta{font-size:.85rem;font-weight:500;background:var(--primary);color:#fff;padding:7px 18px;border-radius:99px;transition:background .2s,transform .15s}
+    .nav-cta:hover{background:var(--primary-d);transform:translateY(-1px)}
+    .nav-admin-btn{font-size:.82rem;font-weight:500;border:1px solid var(--border2);color:var(--muted);padding:6px 14px;border-radius:99px;cursor:pointer;transition:all .2s;background:transparent}
+    .nav-admin-btn:hover{border-color:var(--primary);color:var(--primary)}
+    .theme-btn{background:var(--surface);border:1px solid var(--border2);color:var(--muted);width:36px;height:36px;border-radius:99px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .theme-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+    /* ---- HERO ---- */
+    .hero{max-width:960px;margin:0 auto;padding:90px 2rem 70px;display:grid;grid-template-columns:1fr auto;gap:4rem;align-items:center;position:relative}
+    .hero::after{content:'';position:absolute;right:-60px;top:40px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,148,.08) 0%,transparent 70%);pointer-events:none}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--tag-bg);padding:5px 14px;border-radius:99px;border:1px solid var(--border2);margin-bottom:1.25rem}
+    .hero-eyebrow-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+    .hero-text h1{font-family:var(--font-display);font-weight:800;font-size:clamp(2.4rem,5vw,3.6rem);line-height:1.08;letter-spacing:-.03em;color:var(--text);margin-bottom:1rem}
+    .hero-text h1 .hi{color:var(--muted);font-weight:400;font-style:italic;font-size:.65em;display:block;margin-bottom:4px}
+    .hero-text h1 em{color:var(--accent);font-style:normal}
+    .hero-tagline{font-size:1rem;color:var(--muted);margin-bottom:1rem;max-width:460px;font-weight:300;line-height:1.6}
+    .hero-bio{font-size:.95rem;color:var(--text);max-width:460px;margin-bottom:1.75rem;opacity:.85;line-height:1.75}
+    .hero-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:2rem}
+    .tag{font-size:.75rem;font-weight:500;background:var(--tag-bg);color:var(--tag-text);padding:4px 12px;border-radius:99px;border:1px solid var(--border);letter-spacing:.01em}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+    .btn-primary{font-size:.9rem;font-weight:500;background:var(--primary);color:#fff;padding:11px 24px;border-radius:99px;transition:background .2s,transform .15s;font-family:var(--font-display)}
+    .btn-primary:hover{background:var(--primary-d);transform:translateY(-2px)}
+    .btn-outline{font-size:.9rem;font-weight:500;border:1.5px solid var(--border2);color:var(--text);padding:11px 24px;border-radius:99px;transition:all .2s;font-family:var(--font-display)}
+    .btn-outline:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-2px)}
+    .hero-photo-wrap{width:200px;height:240px;border-radius:20px;overflow:hidden;border:1px solid var(--border2);background:var(--surface);position:relative;flex-shrink:0}
+    .hero-photo-wrap img{width:100%;height:100%;object-fit:cover}
+    .hero-photo-placeholder{width:200px;height:240px;border-radius:20px;background:var(--surface);border:1px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:.75rem;text-align:center;padding:1rem;position:relative;overflow:hidden}
+    .hero-photo-placeholder::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--tag-bg) 0%,transparent 60%)}
+    .hero-photo-placeholder svg{width:44px;height:44px;color:var(--primary);opacity:.4;position:relative}
+    .hero-photo-placeholder span{position:relative}
+    .hero-badge{position:absolute;bottom:-12px;left:-20px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;font-size:.75rem;font-weight:500;color:var(--text);white-space:nowrap}
+    .hero-badge strong{color:var(--accent)}
+    .hero-visual{position:relative}
+
+    /* ---- STATS ---- */
+    .stats-bar{max-width:960px;margin:0 auto;padding:0 2rem 60px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+    .stat-item{background:var(--surface);padding:1.5rem 1.75rem;text-align:center}
+    .stat-num{font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--accent);line-height:1;margin-bottom:6px}
+    .stat-label{font-size:.8rem;color:var(--muted);line-height:1.4}
+
+    /* ---- SECTIONS ---- */
+    section{max-width:960px;margin:0 auto;padding:70px 2rem;border-top:1px solid var(--border)}
+    .section-header{margin-bottom:2.5rem}
+    .section-label{font-size:.7rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+    .section-title{font-family:var(--font-display);font-size:clamp(1.7rem,3vw,2.3rem);font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.02em}
+    .section-desc{margin-top:10px;font-size:.95rem;color:var(--muted);max-width:500px}
+
+    /* PRODUK */
+    .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.1rem}
+    .product-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:transform .25s,border-color .25s,box-shadow .25s;display:flex;flex-direction:column}
+    .product-card:hover{transform:translateY(-5px);border-color:var(--border2);box-shadow:0 16px 48px rgba(0,0,0,.25)}
+    .product-thumb{width:100%;height:150px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--primary);position:relative;overflow:hidden}
+    .product-thumb svg{width:40px;height:40px;opacity:.35;position:relative;z-index:1}
+    .product-body{padding:1.1rem 1.2rem 1.3rem;flex:1;display:flex;flex-direction:column}
+    .product-name{font-family:var(--font-display);font-weight:600;font-size:.975rem;margin-bottom:6px;color:var(--text)}
+    .product-desc{font-size:.855rem;color:var(--muted);margin-bottom:14px;line-height:1.6;flex:1}
+    .product-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .product-tags{display:flex;gap:5px;flex-wrap:wrap}
+    .product-link{font-size:.78rem;font-weight:500;color:var(--accent);border:1px solid var(--border2);padding:4px 12px;border-radius:99px;transition:all .15s;font-family:var(--font-display)}
+    .product-link:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+    /* PENGALAMAN */
+    .exp-list{display:flex;flex-direction:column;gap:0}
+    .exp-item{display:grid;grid-template-columns:120px 1fr;gap:0 2rem;padding:1.75rem 0;border-bottom:1px solid var(--border);position:relative}
+    .exp-item:last-child{border-bottom:none}
+    .exp-item::before{content:'';position:absolute;left:120px;top:1.75rem;bottom:1.75rem;width:1px;background:var(--border)}
+    .exp-year{font-size:.78rem;color:var(--muted);padding-top:3px;text-align:right;padding-right:2rem;font-family:var(--font-display);font-weight:500}
+    .exp-content{padding-left:2rem}
+    .exp-role{font-family:var(--font-display);font-weight:600;font-size:1rem;color:var(--text);margin-bottom:3px}
+    .exp-org{font-size:.875rem;color:var(--accent);margin-bottom:8px;font-weight:400}
+    .exp-desc{font-size:.875rem;color:var(--muted);line-height:1.65}
+    .exp-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+
+    /* SERTIFIKAT */
+    .certs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:.9rem}
+    .cert-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.15rem;display:flex;gap:12px;align-items:flex-start;transition:border-color .2s,transform .2s}
+    .cert-item:hover{border-color:var(--border2);transform:translateX(4px)}
+    .cert-icon{width:38px;height:38px;border-radius:var(--radius-sm);background:var(--tag-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);border:1px solid var(--border)}
+    .cert-icon svg{width:18px;height:18px}
+    .cert-info{flex:1;min-width:0}
+    .cert-name{font-size:.875rem;font-weight:500;color:var(--text);margin-bottom:3px;line-height:1.4}
+    .cert-meta{font-size:.775rem;color:var(--muted)}
+    .cert-badge{font-size:.68rem;font-weight:600;padding:3px 9px;border-radius:99px;flex-shrink:0;align-self:center;letter-spacing:.05em;text-transform:uppercase}
+    .cert-badge.aktif{background:var(--tag-bg);color:var(--accent);border:1px solid var(--border2)}
+    .cert-badge.selesai{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+
+    /* KEAHLIAN */
+    .skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+    .skill-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem}
+    .skill-group-title{font-family:var(--font-display);font-size:.8rem;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+    .skill-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+    .skill-list li{font-size:.875rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+    .skill-list li::before{content:'';width:4px;height:4px;background:var(--primary);border-radius:50%;flex-shrink:0}
+
+    /* KONTAK */
+    .contact-section{text-align:center}
+    .contact-section .section-header{text-align:center}
+    .contact-section .section-desc{margin:0 auto 2.5rem}
+    .contact-wrap{max-width:480px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem 2rem 1.75rem}
+    .contact-links{display:flex;flex-direction:column;gap:10px}
+    .contact-btn{display:flex;align-items:center;gap:12px;font-size:.9rem;font-weight:400;border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:var(--radius-sm);background:var(--surface2);transition:all .2s}
+    .contact-btn:hover{border-color:var(--primary);color:var(--accent);background:var(--tag-bg);transform:translateX(4px)}
+    .contact-btn svg{width:18px;height:18px;color:var(--primary);flex-shrink:0}
+    .contact-btn-label{font-weight:500}
+    .contact-btn-sub{font-size:.8rem;color:var(--muted);margin-left:auto}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:1.75rem 2rem;text-align:center;font-size:.8rem;color:var(--muted)}
+    footer span{color:var(--accent)}
+
+    /* LOADING */
+    .loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:16px}
+    .loading-overlay.hidden{display:none}
+    .loading-spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{font-size:.85rem;color:var(--muted)}
+
+    /* EMPTY STATE */
+    .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.9rem}
+
+    @media(max-width:640px){
+      .hero{grid-template-columns:1fr;padding:50px 1.25rem 40px;gap:2.5rem}
+      .hero::after{display:none}
+      .hero-visual{display:flex;justify-content:center;order:-1}
+      .hero-photo-placeholder,.hero-photo-wrap{width:160px;height:190px}
+      .hero-badge{left:50%;transform:translateX(-50%);bottom:-18px}
+      .stats-bar{grid-template-columns:1fr}
+      .nav-links{display:none}
+      section{padding:50px 1.25rem}
+      .exp-item{grid-template-columns:1fr;gap:4px}
+      .exp-item::before{display:none}
+      .exp-year{text-align:left;padding:0}
+      .exp-content{padding-left:0;padding-top:6px}
+    }
+
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .hero-text>*{opacity:0;animation:fadeInUp .6s ease forwards}
+    .hero-text>*:nth-child(1){animation-delay:.1s}
+    .hero-text>*:nth-child(2){animation-delay:.2s}
+    .hero-text>*:nth-child(3){animation-delay:.3s}
+    .hero-text>*:nth-child(4){animation-delay:.35s}
+    .hero-text>*:nth-child(5){animation-delay:.4s}
+    .hero-text>*:nth-child(6){animation-delay:.45s}
+    .hero-visual{opacity:0;animation:fadeInUp .6s ease .35s forwards}
+    .stats-bar{opacity:0;animation:fadeInUp .6s ease .5s forwards}
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <p class="loading-text">Memuat portfolio...</p>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     AUTH SCREEN
+     ============================================================ -->
+<div id="auth-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">Arya·RM Admin</div>
+    <h2 class="auth-title">Masuk ke Panel Admin</h2>
+    <p class="auth-sub">Kelola semua konten portfolio kamu dari sini.</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Masuk</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Daftar</button>
+    </div>
+    <div id="auth-msg" class="auth-msg"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="email@kamu.com"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="Min. 6 karakter"/>
+    </div>
+    <button class="btn-full" onclick="handleAuth()" id="auth-btn">Masuk</button>
+    <div style="margin-top:1.5rem;text-align:center">
+      <a href="#" onclick="closeAuth()" style="font-size:.82rem;color:var(--muted)">← Kembali ke portfolio</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ADMIN SCREEN
+     ============================================================ -->
+<div id="admin-screen">
+  <div class="admin-nav">
+    <span class="admin-nav-logo">⚙ Admin Panel</span>
+    <div class="admin-nav-right">
+      <button class="btn-sm" onclick="openPortfolio()">Lihat Portfolio</button>
+      <button class="btn-sm danger" onclick="handleLogout()">Keluar</button>
+    </div>
+  </div>
+  <div class="admin-body">
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('profil')">Profil</button>
+      <button class="admin-tab" onclick="switchAdminTab('produk')">Produk</button>
+      <button class="admin-tab" onclick="switchAdminTab('pengalaman')">Pengalaman</button>
+      <button class="admin-tab" onclick="switchAdminTab('sertifikat')">Sertifikat</button>
+      <button class="admin-tab" onclick="switchAdminTab('keahlian')">Keahlian</button>
+    </div>
+
+    <!-- PROFIL -->
+    <div class="admin-section active" id="admin-profil">
+      <p class="admin-section-title">Informasi Profil</p>
+      <div style="margin-bottom:1.5rem">
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:8px;font-weight:500;letter-spacing:.03em">FOTO PROFIL</p>
+        <div id="foto-preview-wrap" style="margin-bottom:10px"></div>
+        <div class="upload-area" id="upload-area">
+          <input type="file" accept="image/*" onchange="handleFotoUpload(event)"/>
+          <strong>Klik untuk upload foto</strong>
+          <p>JPG, PNG · Maks 2MB · Rasio 5:6 disarankan</p>
+        </div>
+        <p id="upload-status" style="font-size:.78rem;color:var(--muted);margin-top:6px"></p>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label>Nama</label><input type="text" id="p-nama" placeholder="Nama lengkap kamu"/></div>
+        <div class="field-group"><label>Tagline</label><input type="text" id="p-tagline" placeholder="Satu kalimat singkat"/></div>
+      </div>
+      <div class="field-group"><label>Bio</label><textarea id="p-bio" placeholder="Deskripsi singkat tentang kamu..."></textarea></div>
+      <div class="field-row">
+        <div class="field-group"><label>Email Kontak</label><input type="email" id="p-email" placeholder="email@kamu.com"/></div>
+        <div class="field-group"><label>WhatsApp (nomor internasional)</label><input type="text" id="p-whatsapp" placeholder="6281234567890"/></div>
+      </div>
+      <div class="field-group"><label>LinkedIn Username</label><input type="text" id="p-linkedin" placeholder="username-linkedin"/></div>
+      <button class="btn-save" onclick="saveProfil()">Simpan Profil</button>
+    </div>
+
+    <!-- PRODUK -->
+    <div class="admin-section" id="admin-produk">
+      <p class="admin-section-title">Produk Digital</p>
+      <div id="produk-list"></div>
+      <div class="add-card">
+        <p class="add-card-title">+ Tambah Produk</p>
+        <div class="field-row">
+          <div class="field-group"><label>Nama Produk</label><input type="text" id="new-produk-nama" placeholder="Nama produk"/></div>
+          <div class="field-group"><label>Link Demo</label><input type="text" id="new-produk-link" placeholder="https://..."/></div>
+        </div>
+        <div class="field-group"><label>Deskripsi</label><textarea id="new-produk-desc" placeholder="Deskripsi singkat produk..."></textarea></div>
+        <div class="field-group"><label>Tags (pisah koma)</label><input type="text" id="new-produk-tags" placeholder="ICD-10, HTML, No-Code"/></div>
+        <button class="btn-save" onclick="addProduk()">Tambah</button>
+      </div>
+    </div>
+
+    <!-- PENGALAMAN -->
+    <div class="admin-section" id="admin-pengalaman">
+      <p class="admin-section-title">Pengalaman & Pendidikan</p>
+      <div id="pengalaman-list"></div>
+      <div class="add-card">
+        <p class="add-card-title">+ Tambah Pengalaman</p>
+        <div class="field-row">
+          <div class="field-group"><label>Tahun</label><input type="text" id="new-exp-tahun" placeholder="2023 – Kini"/></div>
+          <div class="field-group"><label>Peran / Jabatan</label><input type="text" id="new-exp-peran" placeholder="Perekam Medis"/></div>
+        </div>
+        <div class="field-group"><label>Organisasi / Instansi</label><input type="text" id="new-exp-org" placeholder="RS. Contoh, Makassar"/></div>
+        <div class="field-group"><label>Deskripsi</label><textarea id="new-exp-desc" placeholder="Uraian singkat tanggung jawab..."></textarea></div>
+        <div class="field-group"><label>Tags (pisah koma)</label><input type="text" id="new-exp-tags" placeholder="ICD-10, BPJS, Rekam Medis"/></div>
+        <button class="btn-save" onclick="addPengalaman()">Tambah</button>
+      </div>
+    </div>
+
+    <!-- SERTIFIKAT -->
+    <div class="admin-section" id="admin-sertifikat">
+      <p class="admin-section-title">Sertifikat & Kompetensi</p>
+      <div id="sertifikat-list"></div>
+      <div class="add-card">
+        <p class="add-card-title">+ Tambah Sertifikat</p>
+        <div class="field-row">
+          <div class="field-group"><label>Nama Sertifikat</label><input type="text" id="new-cert-nama" placeholder="Health Informatics Specialization"/></div>
+          <div class="field-group"><label>Info (Platform · Tahun)</label><input type="text" id="new-cert-meta" placeholder="Coursera · 2025"/></div>
+        </div>
+        <div class="field-group">
+          <label>Status</label>
+          <select id="new-cert-status">
+            <option value="aktif">Aktif</option>
+            <option value="selesai">Selesai</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>File Sertifikat (PDF / JPG / PNG · Maks 5MB)</label>
+          <div class="upload-area">
+            <input type="file" id="new-cert-file" accept=".pdf,.jpg,.jpeg,.png" onchange="previewCertFile(event)"/>
+            <strong>Klik untuk pilih file</strong>
+            <p id="cert-file-name" style="margin-top:4px">Belum ada file dipilih</p>
+          </div>
+        </div>
+        <button class="btn-save" onclick="addSertifikat()">Tambah</button>
+      </div>
+    </div>
+
+    <!-- KEAHLIAN -->
+    <div class="admin-section" id="admin-keahlian">
+      <p class="admin-section-title">Keahlian</p>
+      <div id="keahlian-list"></div>
+      <div class="add-card">
+        <p class="add-card-title">+ Tambah Grup Keahlian</p>
+        <div class="field-group"><label>Nama Grup</label><input type="text" id="new-skill-grup" placeholder="Rekam Medis"/></div>
+        <div class="field-group"><label>Item Keahlian (satu per baris)</label><textarea id="new-skill-items" placeholder="Koding ICD-10&#10;Verifikasi BPJS&#10;Rekam medis rawat inap"></textarea></div>
+        <button class="btn-save" onclick="addKeahlian()">Tambah</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     PORTFOLIO (public view)
+     ============================================================ -->
+<div id="portfolio-view">
+
+  <nav>
+    <div class="nav-inner">
+      <span class="nav-logo">Arya·RM</span>
+      <ul class="nav-links">
+        <li><a href="#pengalaman">Pengalaman</a></li>
+        <li><a href="#produk">Produk</a></li>
+        <li><a href="#sertifikat">Sertifikat</a></li>
+        <li><a href="#keahlian">Keahlian</a></li>
+      </ul>
+      <div class="nav-right">
+        <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle tema">☀</button>
+        <button class="nav-admin-btn" id="nav-admin-btn" onclick="openAdmin()">Admin</button>
+        <a href="#kontak" class="nav-cta">Hubungi Saya</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Terbuka untuk Kolaborasi
+      </div>
+      <h1>
+        <span class="hi">Halo, saya</span>
+        <span id="hero-nama">Arya — <em>Perekam Medis</em> &amp; Builder Digital</span>
+      </h1>
+      <p class="hero-tagline" id="hero-tagline">Menjembatani rekam medis dengan teknologi digital untuk layanan kesehatan yang lebih baik di Indonesia.</p>
+      <p class="hero-bio" id="hero-bio">Perekam medis profesional (D3) berpengalaman di sistem kesehatan Indonesia, kini aktif membangun produk digital untuk komunitas perekam medis — dari ICD-10 decision tools hingga solusi pengelolaan data rekam medis yang efisien.</p>
+      <div class="hero-tags">
+        <span class="tag">Rekam Medis</span>
+        <span class="tag">ICD-10 Coding</span>
+        <span class="tag">Produk Digital</span>
+        <span class="tag">Health Informatics</span>
+        <span class="tag">BPJS</span>
+        <span class="tag">No-Code Builder</span>
+      </div>
+      <div class="hero-actions">
+        <a href="#produk" class="btn-primary">Lihat Produk Saya →</a>
+        <a href="CV-Arya.pdf" class="btn-outline" download>Unduh CV</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div id="hero-photo-container">
+        <div class="hero-photo-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span>Foto Profil<br/>Upload di Admin</span>
+        </div>
+      </div>
+      <div class="hero-badge"><strong>2+</strong> tahun di rekam medis</div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item"><div class="stat-num">3+</div><div class="stat-label">Produk Digital<br/>Dibangun</div></div>
+    <div class="stat-item"><div class="stat-num">5+</div><div class="stat-label">Sertifikat &amp;<br/>Kompetensi</div></div>
+    <div class="stat-item"><div class="stat-num">D3</div><div class="stat-label">Rekam Medis &amp;<br/>Informasi Kesehatan</div></div>
+  </div>
+
+  <section id="pengalaman">
+    <div class="section-header">
+      <p class="section-label">Perjalanan</p>
+      <h2 class="section-title">Pengalaman &amp; Pendidikan</h2>
+    </div>
+    <div class="exp-list" id="exp-list">
+      <div class="empty-state">Belum ada data pengalaman. Tambahkan di admin panel.</div>
+    </div>
+  </section>
+
+  <section id="produk">
+    <div class="section-header">
+      <p class="section-label">Karya</p>
+      <h2 class="section-title">Produk Digital Kesehatan</h2>
+    </div>
+    <div class="products-grid" id="produk-grid">
+      <div class="empty-state">Belum ada produk. Tambahkan di admin panel.</div>
+    </div>
+  </section>
+
+  <section id="keahlian">
+    <div class="section-header">
+      <p class="section-label">Skill</p>
+      <h2 class="section-title">Keahlian &amp; Kompetensi</h2>
+    </div>
+    <div class="skills-grid" id="skills-grid">
+      <div class="empty-state">Belum ada keahlian. Tambahkan di admin panel.</div>
+    </div>
+  </section>
+
+  <section id="sertifikat">
+    <div class="section-header">
+      <p class="section-label">Kredensial</p>
+      <h2 class="section-title">Sertifikat &amp; Kompetensi</h2>
+    </div>
+    <div class="certs-grid" id="certs-grid">
+      <div class="empty-state">Belum ada sertifikat. Tambahkan di admin panel.</div>
+    </div>
+  </section>
+
+  <section id="kontak" class="contact-section">
+    <div class="section-header">
+      <p class="section-label">Kontak</p>
+      <h2 class="section-title">Mari Berkolaborasi</h2>
+      <p class="section-desc">Terbuka untuk diskusi produk, kolaborasi, atau konsultasi rekam medis.</p>
+    </div>
+    <div class="contact-wrap">
+      <div class="contact-links" id="contact-links">
+        <a href="mailto:saittamaa99@gmail.com" class="contact-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span class="contact-btn-label">Email</span>
+          <span class="contact-btn-sub" id="contact-email-sub">saittamaa99@gmail.com</span>
+        </a>
+        <a id="contact-wa" href="https://wa.me/159saidariyandi" class="contact-btn" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <span class="contact-btn-label">WhatsApp</span>
+          <span class="contact-btn-sub" id="contact-wa-sub">Update di admin panel</span>
+        </a>
+        <a id="contact-li" href="#" class="contact-btn" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          <span class="contact-btn-label">LinkedIn</span>
+          <span class="contact-btn-sub" id="contact-li-sub">Update di admin panel</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2025 <span id="footer-nama">Arya</span>. Dibuat untuk pelayanan kesehatan yang lebih baik di Indonesia. 🌿</p>
+  </footer>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://fyxwilpxmwkoqpagecat.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_N6ICaR_ofK0cMIUqpqPRkA_k2-P3MKF';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let authMode = 'login';
+
+// ---- INIT ----
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) currentUser = session.user;
+  updateAdminBtn();
+  await loadAllData();
+  document.getElementById('loading-overlay').classList.add('hidden');
+}
+
+function updateAdminBtn() {
+  const btn = document.getElementById('nav-admin-btn');
+  if (currentUser) { btn.textContent = 'Panel Admin'; }
+  else { btn.textContent = 'Admin'; }
+}
+
+// ---- AUTH ----
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    t.classList.toggle('active', (mode==='login'&&i===0)||(mode==='register'&&i===1));
+  });
+  document.getElementById('auth-btn').textContent = mode === 'login' ? 'Masuk' : 'Daftar';
+  document.getElementById('auth-msg').className = 'auth-msg';
+}
+
+function showAuthMsg(msg, type) {
+  const el = document.getElementById('auth-msg');
+  el.textContent = msg;
+  el.className = 'auth-msg ' + type;
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if (!email || !password) { showAuthMsg('Email dan password wajib diisi.', 'error'); return; }
+  const btn = document.getElementById('auth-btn');
+  btn.textContent = 'Memproses...'; btn.disabled = true;
+  let result;
+  if (authMode === 'login') {
+    result = await sb.auth.signInWithPassword({ email, password });
+  } else {
+    result = await sb.auth.signUp({ email, password });
+  }
+  btn.disabled = false;
+  btn.textContent = authMode === 'login' ? 'Masuk' : 'Daftar';
+  if (result.error) { showAuthMsg(result.error.message, 'error'); return; }
+  currentUser = result.data.user;
+  if (authMode === 'register') {
+    showAuthMsg('Akun dibuat! Melanjutkan ke admin panel...', 'success');
+    setTimeout(() => openAdminPanel(), 1000);
+  } else {
+    openAdminPanel();
+  }
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  updateAdminBtn();
+  openPortfolio();
+  showToast('Berhasil keluar');
+}
+
+function closeAuth() {
+  document.getElementById('auth-screen').classList.remove('active');
+}
+
+// ---- NAVIGATION ----
+function openAdmin() {
+  if (currentUser) { openAdminPanel(); }
+  else {
+    document.getElementById('portfolio-view').style.display = 'none';
+    document.getElementById('admin-screen').classList.remove('active');
+    document.getElementById('auth-screen').classList.add('active');
+  }
+}
+
+function openAdminPanel() {
+  document.getElementById('auth-screen').classList.remove('active');
+  document.getElementById('portfolio-view').style.display = 'none';
+  document.getElementById('admin-screen').classList.add('active');
+  loadAdminData();
+}
+
+function openPortfolio() {
+  document.getElementById('admin-screen').classList.remove('active');
+  document.getElementById('auth-screen').classList.remove('active');
+  document.getElementById('portfolio-view').style.display = 'block';
+  updateAdminBtn();
+}
+
+// ---- TABS ----
+function switchAdminTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('admin-'+tab).classList.add('active');
+}
+
+// ---- TOAST ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ---- THEME ----
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.querySelector('.theme-btn');
+  if (html.getAttribute('data-theme') === 'light') { html.removeAttribute('data-theme'); btn.textContent = '☀'; }
+  else { html.setAttribute('data-theme','light'); btn.textContent = '🌙'; }
+}
+
+// ---- FOTO UPLOAD ----
+async function handleFotoUpload(e) {
+  if (!currentUser) return;
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2*1024*1024) { showToast('File terlalu besar (maks 2MB)'); return; }
+  document.getElementById('upload-status').textContent = 'Mengupload...';
+  const ext = file.name.split('.').pop();
+  const path = `${currentUser.id}/foto.${ext}`;
+  const { error: upErr } = await sb.storage.from('portfolio-assets').upload(path, file, { upsert: true });
+  if (upErr) {
+    // bucket belum ada, simpan sebagai base64 di profil
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const b64 = ev.target.result;
+      await sb.from('profiles').upsert({ user_id: currentUser.id, foto_url: b64, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      renderFotoPreview(b64);
+      document.getElementById('upload-status').textContent = 'Foto tersimpan.';
+      showToast('Foto berhasil disimpan');
+      renderHeroPhoto(b64);
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  const { data } = sb.storage.from('portfolio-assets').getPublicUrl(path);
+  const url = data.publicUrl;
+  await sb.from('profiles').upsert({ user_id: currentUser.id, foto_url: url, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  renderFotoPreview(url);
+  renderHeroPhoto(url);
+  document.getElementById('upload-status').textContent = 'Foto berhasil diupload.';
+  showToast('Foto berhasil diupload');
+}
+
+function renderFotoPreview(url) {
+  document.getElementById('foto-preview-wrap').innerHTML =
+    `<img src="${url}" class="foto-preview" alt="Foto profil"/>`;
+}
+
+function renderHeroPhoto(url) {
+  document.getElementById('hero-photo-container').innerHTML =
+    `<div class="hero-photo-wrap"><img src="${url}" alt="Foto Arya"/></div>`;
+}
+
+// ---- LOAD ALL DATA (public view) ----
+async function loadAllData() {
+  // Load profil - try to get any profile (newest) since we may not have user
+  const { data: profiles } = await sb.from('profiles').select('*').limit(1);
+  if (profiles && profiles.length > 0) applyProfil(profiles[0]);
+
+  const { data: produk } = await sb.from('produk').select('*').order('urutan');
+  renderProdukGrid(produk || []);
+
+  const { data: exp } = await sb.from('pengalaman').select('*').order('urutan');
+  renderExpList(exp || []);
+
+  const { data: certs } = await sb.from('sertifikat').select('*');
+  renderCertGrid(certs || []);
+
+  const { data: skills } = await sb.from('keahlian').select('*');
+  renderSkillsGrid(skills || []);
+}
+
+function applyProfil(p) {
+  if (p.nama) {
+    document.getElementById('hero-nama').innerHTML = p.nama + (p.nama.includes('—') ? '' : ' — <em>Perekam Medis</em> &amp; Builder Digital');
+    document.getElementById('footer-nama').textContent = p.nama.split(' ')[0];
+  }
+  if (p.tagline) document.getElementById('hero-tagline').textContent = p.tagline;
+  if (p.bio) document.getElementById('hero-bio').textContent = p.bio;
+  if (p.email) {
+    document.querySelector('#contact-links a:first-child').href = 'mailto:' + p.email;
+    document.getElementById('contact-email-sub').textContent = p.email;
+  }
+  if (p.whatsapp) {
+    document.getElementById('contact-wa').href = 'https://wa.me/' + p.whatsapp;
+    document.getElementById('contact-wa-sub').textContent = '+' + p.whatsapp;
+  }
+  if (p.linkedin) {
+    document.getElementById('contact-li').href = 'https://linkedin.com/in/' + p.linkedin;
+    document.getElementById('contact-li-sub').textContent = p.linkedin;
+  }
+  if (p.foto_url) renderHeroPhoto(p.foto_url);
+}
+
+function renderProdukGrid(data) {
+  const el = document.getElementById('produk-grid');
+  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada produk. Tambahkan di admin panel.</div>'; return; }
+  el.innerHTML = data.map(p => `
+    <div class="product-card">
+      <div class="product-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+      </div>
+      <div class="product-body">
+        <p class="product-name">${p.nama||''}</p>
+        <p class="product-desc">${p.deskripsi||''}</p>
+        <div class="product-footer">
+          <div class="product-tags">${(p.tags||'').split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div>
+          ${p.link ? `<a href="${p.link}" class="product-link" target="_blank">Demo →</a>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderExpList(data) {
+  const el = document.getElementById('exp-list');
+  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada data pengalaman.</div>'; return; }
+  el.innerHTML = data.map(e => `
+    <div class="exp-item">
+      <div class="exp-year">${e.tahun||''}</div>
+      <div class="exp-content">
+        <p class="exp-role">${e.peran||''}</p>
+        <p class="exp-org">${e.organisasi||''}</p>
+        <p class="exp-desc">${e.deskripsi||''}</p>
+        <div class="exp-tags">${(e.tags||'').split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCertGrid(data) {
+  const el = document.getElementById('certs-grid');
+  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada sertifikat.</div>'; return; }
+  el.innerHTML = data.map(c => `
+    <div class="cert-item">
+      <div class="cert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="cert-info">
+        <p class="cert-name">${c.nama||''}</p>
+        <p class="cert-meta">${c.meta||''}</p>
+        ${c.file_url ? `<a href="${c.file_url}" target="_blank" style="font-size:.75rem;color:var(--accent);border:1px solid var(--border2);padding:2px 10px;border-radius:99px;display:inline-block;margin-top:5px;transition:all .2s" onmouseover="this.style.background='var(--primary)';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='var(--accent)'">📄 Lihat File</a>` : ''}
+      </div>
+      <span class="cert-badge ${c.status||'aktif'}">${c.status||'aktif'}</span>
+    </div>`).join('');
+}
+
+function renderSkillsGrid(data) {
+  const el = document.getElementById('skills-grid');
+  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada keahlian.</div>'; return; }
+  el.innerHTML = data.map(s => `
+    <div class="skill-group">
+      <p class="skill-group-title">${s.grup||''}</p>
+      <ul class="skill-list">${(s.items||'').split('\n').filter(i=>i.trim()).map(i=>`<li>${i.trim()}</li>`).join('')}</ul>
+    </div>`).join('');
+}
+
+// ---- ADMIN DATA LOAD ----
+async function loadAdminData() {
+  if (!currentUser) return;
+  const { data: p } = await sb.from('profiles').select('*').eq('user_id', currentUser.id).single();
+  if (p) {
+    document.getElementById('p-nama').value = p.nama||'';
+    document.getElementById('p-tagline').value = p.tagline||'';
+    document.getElementById('p-bio').value = p.bio||'';
+    document.getElementById('p-email').value = p.email||'';
+    document.getElementById('p-whatsapp').value = p.whatsapp||'';
+    document.getElementById('p-linkedin').value = p.linkedin||'';
+    if (p.foto_url) renderFotoPreview(p.foto_url);
+  }
+  const { data: produk } = await sb.from('produk').select('*').eq('user_id', currentUser.id).order('urutan');
+  renderAdminProduk(produk||[]);
+  const { data: exp } = await sb.from('pengalaman').select('*').eq('user_id', currentUser.id).order('urutan');
+  renderAdminPengalaman(exp||[]);
+  const { data: certs } = await sb.from('sertifikat').select('*').eq('user_id', currentUser.id);
+  renderAdminSertifikat(certs||[]);
+  const { data: skills } = await sb.from('keahlian').select('*').eq('user_id', currentUser.id);
+  renderAdminKeahlian(skills||[]);
+}
+
+// ---- ADMIN RENDERS ----
+function renderAdminProduk(data) {
+  const el = document.getElementById('produk-list');
+  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada produk.</div>'; return; }
+  el.innerHTML = data.map(p => `
+    <div class="card-item">
+      <div class="card-item-header">
+        <div><p class="card-item-title">${p.nama||''}</p><p class="card-item-sub">${(p.tags||'').split(',').slice(0,3).join(' · ')}</p></div>
+        <div class="card-item-actions">
+          <button class="icon-btn del" onclick="deleteItem('produk','${p.id}')">✕</button>
+        </div>
+      </div>
+      <p style="font-size:.83rem;color:var(--muted)">${p.deskripsi||''}</p>
+    </div>`).join('');
+}
+
+function renderAdminPengalaman(data) {
+  const el = document.getElementById('pengalaman-list');
+  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada pengalaman.</div>'; return; }
+  el.innerHTML = data.map(e => `
+    <div class="card-item">
+      <div class="card-item-header">
+        <div><p class="card-item-title">${e.peran||''}</p><p class="card-item-sub">${e.organisasi||''} · ${e.tahun||''}</p></div>
+        <div class="card-item-actions">
+          <button class="icon-btn del" onclick="deleteItem('pengalaman','${e.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAdminSertifikat(data) {
+  const el = document.getElementById('sertifikat-list');
+  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada sertifikat.</div>'; return; }
+  el.innerHTML = data.map(c => `
+    <div class="card-item">
+      <div class="card-item-header">
+        <div><p class="card-item-title">${c.nama||''}</p><p class="card-item-sub">${c.meta||''} · <span class="cert-badge ${c.status}">${c.status}</span></p></div>
+        <div class="card-item-actions">
+          <button class="icon-btn del" onclick="deleteItem('sertifikat','${c.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAdminKeahlian(data) {
+  const el = document.getElementById('keahlian-list');
+  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada keahlian.</div>'; return; }
+  el.innerHTML = data.map(s => `
+    <div class="card-item">
+      <div class="card-item-header">
+        <div><p class="card-item-title">${s.grup||''}</p><p class="card-item-sub">${(s.items||'').split('\n').filter(i=>i.trim()).length} item</p></div>
+        <div class="card-item-actions">
+          <button class="icon-btn del" onclick="deleteItem('keahlian','${s.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ---- SAVE PROFIL ----
+async function saveProfil() {
+  if (!currentUser) { const {data:{session}}=await sb.auth.getSession(); if(session){currentUser=session.user;}else{showToast('Sesi habis, silakan login ulang');return;} }
+  const payload = {
+    user_id: currentUser.id,
+    nama: document.getElementById('p-nama').value,
+    tagline: document.getElementById('p-tagline').value,
+    bio: document.getElementById('p-bio').value,
+    email: document.getElementById('p-email').value,
+    whatsapp: document.getElementById('p-whatsapp').value,
+    linkedin: document.getElementById('p-linkedin').value,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('profiles').upsert(payload, { onConflict: 'user_id' });
+  if (error) { showToast('Gagal menyimpan: ' + error.message); return; }
+  showToast('Profil berhasil disimpan ✓');
+  applyProfil(payload);
+}
+
+// ---- ADD ITEMS ----
+async function addProduk() {
+  if (!currentUser) { const {data:{session}}=await sb.auth.getSession(); if(session){currentUser=session.user;}else{showToast('Sesi habis, silakan login ulang');return;} }
+  const payload = {
+    user_id: currentUser.id,
+    nama: document.getElementById('new-produk-nama').value,
+    deskripsi: document.getElementById('new-produk-desc').value,
+    tags: document.getElementById('new-produk-tags').value,
+    link: document.getElementById('new-produk-link').value,
+  };
+  if (!payload.nama) { showToast('Nama produk wajib diisi'); return; }
+  const { error } = await sb.from('produk').insert(payload);
+  if (error) { showToast('Gagal: ' + error.message); return; }
+  showToast('Produk ditambahkan ✓');
+  ['new-produk-nama','new-produk-desc','new-produk-tags','new-produk-link'].forEach(id => document.getElementById(id).value='');
+  const { data } = await sb.from('produk').select('*').eq('user_id', currentUser.id);
+  renderAdminProduk(data||[]); renderProdukGrid(data||[]);
+}
+
+async function addPengalaman() {
+  if (!currentUser) { const {data:{session}}=await sb.auth.getSession(); if(session){currentUser=session.user;}else{showToast('Sesi habis, silakan login ulang');return;} }
+  const payload = {
+    user_id: currentUser.id,
+    tahun: document.getElementById('new-exp-tahun').value,
+    peran: document.getElementById('new-exp-peran').value,
+    organisasi: document.getElementById('new-exp-org').value,
+    deskripsi: document.getElementById('new-exp-desc').value,
+    tags: document.getElementById('new-exp-tags').value,
+  };
+  if (!payload.peran) { showToast('Peran wajib diisi'); return; }
+  const { error } = await sb.from('pengalaman').insert(payload);
+  if (error) { showToast('Gagal: ' + error.message); return; }
+  showToast('Pengalaman ditambahkan ✓');
+  ['new-exp-tahun','new-exp-peran','new-exp-org','new-exp-desc','new-exp-tags'].forEach(id => document.getElementById(id).value='');
+  const { data } = await sb.from('pengalaman').select('*').eq('user_id', currentUser.id);
+  renderAdminPengalaman(data||[]); renderExpList(data||[]);
+}
+
+function previewCertFile(e) {
+  const file = e.target.files[0];
+  const label = document.getElementById('cert-file-name');
+  if (file) label.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+  else label.textContent = 'Belum ada file dipilih';
+}
+
+async function addSertifikat() {
+  if (!currentUser) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { currentUser = session.user; }
+    else { showToast('Sesi habis, silakan login ulang'); return; }
+  }
+  const nama = document.getElementById('new-cert-nama').value.trim();
+  const meta = document.getElementById('new-cert-meta').value.trim();
+  const status = document.getElementById('new-cert-status').value;
+  const fileInput = document.getElementById('new-cert-file');
+  const file = fileInput ? fileInput.files[0] : null;
+  if (!nama) { showToast('Nama sertifikat wajib diisi'); return; }
+
+  let file_url = null;
+  if (file) {
+    if (file.size > 5*1024*1024) { showToast('File terlalu besar (maks 5MB)'); return; }
+    showToast('Mengupload file...');
+    const ext = file.name.split('.').pop();
+    const path = currentUser.id + '/' + Date.now() + '.' + ext;
+    const { error: upErr } = await sb.storage.from('sertifikat-files').upload(path, file, { upsert: true });
+    if (upErr) { showToast('Gagal upload: ' + upErr.message); return; }
+    const { data: urlData } = sb.storage.from('sertifikat-files').getPublicUrl(path);
+    file_url = urlData.publicUrl;
+  }
+
+  const payload = { user_id: currentUser.id, nama, meta, status, file_url };
+  const { error } = await sb.from('sertifikat').insert(payload);
+  if (error) { showToast('Gagal: ' + error.message); return; }
+  showToast('Sertifikat ditambahkan ✓');
+  document.getElementById('new-cert-nama').value='';
+  document.getElementById('new-cert-meta').value='';
+  if (fileInput) { fileInput.value=''; document.getElementById('cert-file-name').textContent='Belum ada file dipilih'; }
+  const { data } = await sb.from('sertifikat').select('*').eq('user_id', currentUser.id);
+  renderAdminSertifikat(data||[]); renderCertGrid(data||[]);
+}
+
+async function addKeahlian() {
+  if (!currentUser) { const {data:{session}}=await sb.auth.getSession(); if(session){currentUser=session.user;}else{showToast('Sesi habis, silakan login ulang');return;} }
+  const payload = {
+    user_id: currentUser.id,
+    grup: document.getElementById('new-skill-grup').value,
+    items: document.getElementById('new-skill-items').value,
+  };
+  if (!payload.grup) { showToast('Nama grup wajib diisi'); return; }
+  const { error } = await sb.from('keahlian').insert(payload);
+  if (error) { showToast('Gagal: ' + error.message); return; }
+  showToast('Keahlian ditambahkan ✓');
+  ['new-skill-grup','new-skill-items'].forEach(id => document.getElementById(id).value='');
+  const { data } = await sb.from('keahlian').select('*').eq('user_id', currentUser.id);
+  renderAdminKeahlian(data||[]); renderSkillsGrid(data||[]);
+}
+
+// ---- DELETE ----
+async function deleteItem(table, id) {
+  if (!confirm('Hapus item ini?')) return;
+  const { error } = await sb.from(table).delete().eq('id', id);
+  if (error) { showToast('Gagal hapus: ' + error.message); return; }
+  showToast('Dihapus ✓');
+  loadAdminData();
+  loadAllData();
+}
+
+// ---- START ----
+init();
+</script>
+</body>
+</html>
