@@ -886,7 +886,6 @@ function renderAdminSertifikat(data) {
       <div class="card-item-header">
         <div><p class="card-item-title">${c.nama||''}</p><p class="card-item-sub">${c.meta||''} · <span class="cert-badge ${c.status}">${c.status}</span></p></div>
         <div class="card-item-actions">
-          <button class="icon-btn" onclick="editSertifikat(this,'${c.id}','${c.nama||&quot;&quot;}','${c.meta||&quot;&quot;}','${c.status||&quot;aktif&quot;}')">✎</button>
           <button class="icon-btn del" onclick="deleteItem('sertifikat','${c.id}')">✕</button>
         </div>
       </div>
@@ -970,18 +969,7 @@ function previewCertFile(e) {
   if (file) label.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
   else label.textContent = 'Belum ada file dipilih';
 }
-async function editSertifikat(el, id, nama, meta, status) {
-  const newNama = prompt('Nama sertifikat:', nama);
-  if (newNama === null) return;
-  const newMeta = prompt('Info (Platform · Tahun):', meta);
-  if (newMeta === null) return;
-  const { error } = await sb.from('sertifikat').update({ nama: newNama, meta: newMeta }).eq('id', id);
-  if (error) { showToast('Gagal edit: ' + error.message); return; }
-  showToast('Sertifikat diperbarui ✓');
-  const { data } = await sb.from('sertifikat').select('*').eq('user_id', currentUser.id);
-  renderAdminSertifikat(data||[]);
-  renderCertGrid(data||[]);
-}
+
 async function addSertifikat() {
   if (!currentUser) {
     const { data: { session } } = await sb.auth.getSession();
