@@ -759,9 +759,9 @@ function applyProfil(p) {
     document.getElementById('contact-wa').href = 'https://wa.me/' + p.whatsapp;
     document.getElementById('contact-wa-sub').textContent = '+' + p.whatsapp;
   }
-  if (p.Lynk.id) {
-    document.getElementById('contact-li').href = 'https://lynk.id/' + p.Lynk.id;
-    document.getElementById('contact-li-sub').textContent = p.Lynk.id;
+  if (p.linkedin) {
+    document.getElementById('contact-li').href = 'https://lynk.id/' + p.linkedin;
+    document.getElementById('contact-li-sub').textContent = p.linkedin;
   }
   if (p.foto_url) renderHeroPhoto(p.foto_url);
 }
@@ -835,7 +835,7 @@ async function loadAdminData() {
     document.getElementById('p-bio').value = p.bio||'';
     document.getElementById('p-email').value = p.email||'';
     document.getElementById('p-whatsapp').value = p.whatsapp||'';
-    document.getElementById('p-Lynk.id').value = p.Lynk.id||'';
+    document.getElementById('p-Lynk.id').value = p.linkedin||'';
     if (p.foto_url) renderFotoPreview(p.foto_url);
   }
   const { data: produk } = await sb.from('produk').select('*').eq('user_id', currentUser.id).order('urutan');
