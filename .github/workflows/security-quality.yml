@@ -1,0 +1,67 @@
+name: Security & Quality
+
+on:
+  push:
+    branches: [main, 'automation/**']
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dom-audit:
+    name: DOM security audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run DOM security audit (strict gate)
+        run: node scripts/security-audit.mjs
+        env:
+          STRICT_SECURITY: '1'
+      - name: Upload DOM audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dom-security-audit
+          path: security-reports/dom-audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Semgrep
+        run: python -m pip install --disable-pip-version-check semgrep
+      - name: Run Semgrep SAST
+        run: semgrep scan --error --config p/security-audit --sarif --output semgrep.sarif --metrics=off
+      - name: Upload Semgrep report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sast
+          path: semgrep.sarif
+          if-no-files-found: warn
+          retention-days: 14
+
