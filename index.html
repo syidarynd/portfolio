@@ -1209,12 +1209,15 @@ function renderAdminKeahlian(data) {
 // ---- TOGGLE & SAVE EDIT ----
 function toggleEdit(table, id) {
   const el = document.getElementById(`edit-${table}-${id}`);
+  if (!el) return;
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 async function saveEdit(table, id) {
   if (!currentUser) { showToast('Sesi habis, silakan login ulang'); return; }
-  const panel = document.getElementById(`edit-${table}-${id}`);\n  if (!panel) return;\n  const btn = panel.querySelector('.btn-save');
+  const panel = document.getElementById(`edit-${table}-${id}`);
+  if (!panel) return;
+  const btn = panel.querySelector('.btn-save');
   setLoading(btn, true, 'Simpan');
   let payload = {};
   if (table === 'produk') {
@@ -1449,6 +1452,7 @@ function bindStaticActions() {
 }
 
 // ---- START ----
+bindStaticActions();
 init();
 </script>
 </body>
