@@ -752,19 +752,157 @@ async function handleFotoUpload(e) {
   showToast('Foto berhasil diupload');
 }
 
+// ---- SAFE DOM HELPERS ----
+function makeNode(tag, className = '', text = null) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== null && text !== undefined) node.textContent = String(text);
+  return node;
+}
+
+function setSafeLink(anchor, value, { allowHttp = false } = {}) {
+  try {
+    const url = new URL(String(value || ''), window.location.href);
+    const allowed = url.protocol === 'https:' || (allowHttp && url.protocol === 'http:');
+    if (!allowed) return false;
+    anchor.href = url.href;
+    anchor.rel = 'noopener noreferrer';
+    anchor.target = '_blank';
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function setSafeImage(img, value) {
+  const raw = String(value || '');
+  if (/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i.test(raw)) {
+    img.src = raw;
+    return true;
+  }
+  try {
+    const url = new URL(raw, window.location.href);
+    if (url.protocol !== 'https:') return false;
+    img.src = url.href;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function renderEmpty(container, message, leftAligned = false) {
+  const empty = makeNode('div', 'empty-state', message);
+  if (leftAligned) {
+    empty.style.textAlign = 'left';
+    empty.style.padding = '1rem 0';
+  }
+  container.replaceChildren(empty);
+}
+
+function appendTags(container, value) {
+  String(value || '').split(',').map(tag => tag.trim()).filter(Boolean).forEach(tag => {
+    container.appendChild(makeNode('span', 'tag', tag));
+  });
+}
+
+function adminActionButton(label, action, table, itemId, extraClass = 'icon-btn') {
+  const button = makeNode('button', extraClass, label);
+  button.type = 'button';
+  button.dataset.action = action;
+  button.dataset.table = table;
+  button.dataset.itemId = String(itemId);
+  return button;
+}
+
+function addAdminActionDelegation(container) {
+  if (container.dataset.actionsBound === 'true') return;
+  container.dataset.actionsBound = 'true';
+  container.addEventListener('click', event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button || !container.contains(button)) return;
+    const { action, table, itemId } = button.dataset;
+    if (!['produk', 'pengalaman', 'sertifikat', 'keahlian'].includes(table) || !itemId) return;
+    if (action === 'edit' || action === 'cancel') toggleEdit(table, itemId);
+    else if (action === 'save') saveEdit(table, itemId);
+    else if (action === 'delete') deleteItem(table, itemId);
+  });
+}
+
+function addAdminField(parent, labelText, id, value, type = 'input') {
+  const group = makeNode('div', 'field-group');
+  group.appendChild(makeNode('label', '', labelText));
+  const field = makeNode(type === 'textarea' ? 'textarea' : 'input');
+  field.id = id;
+  if (type !== 'textarea') field.type = 'text';
+  field.value = value == null ? '' : String(value);
+  group.appendChild(field);
+  parent.appendChild(group);
+  return field;
+}
+
+function addAdminFieldRow(parent, fields) {
+  const row = makeNode('div', 'field-row');
+  fields.forEach(field => addAdminField(row, field.label, field.id, field.value));
+  parent.appendChild(row);
+}
+
+function addEditActions(parent, table, itemId) {
+  parent.appendChild(adminActionButton('Simpan', 'save', table, itemId, 'btn-save'));
+  parent.appendChild(adminActionButton('Batal', 'cancel', table, itemId, 'btn-cancel'));
+}
+
+function createEditPanel(table, itemId) {
+  const panel = makeNode('div');
+  panel.id = 'edit-' + table + '-' + String(itemId);
+  panel.style.display = 'none';
+  panel.style.marginTop = '1rem';
+  panel.style.borderTop = '1px solid var(--border)';
+  panel.style.paddingTop = '1rem';
+  return panel;
+}
+
+function createAdminCard(table, itemId, title, subtitle) {
+  const card = makeNode('div', 'card-item');
+  card.id = table + '-card-' + String(itemId);
+  const header = makeNode('div', 'card-item-header');
+  const heading = makeNode('div');
+  heading.appendChild(makeNode('p', 'card-item-title', title));
+  heading.appendChild(makeNode('p', 'card-item-sub', subtitle));
+  const actions = makeNode('div', 'card-item-actions');
+  actions.appendChild(adminActionButton('✎', 'edit', table, itemId));
+  actions.appendChild(adminActionButton('✕', 'delete', table, itemId, 'icon-btn del'));
+  header.append(heading, actions);
+  card.appendChild(header);
+  return card;
+}
+
+// ---- PHOTO RENDERERS ----
 function renderFotoPreview(url) {
-  document.getElementById('foto-preview-wrap').innerHTML =
-    `<img src="${url}" class="foto-preview" alt="Foto profil"/>`;
+  const wrap = document.getElementById('foto-preview-wrap');
+  const img = makeNode('img', 'foto-preview');
+  img.alt = 'Foto profil';
+  if (!setSafeImage(img, url)) {
+    wrap.replaceChildren();
+    return;
+  }
+  wrap.replaceChildren(img);
 }
 
 function renderHeroPhoto(url) {
-  document.getElementById('hero-photo-container').innerHTML =
-    `<div class="hero-photo-wrap"><img src="${url}" alt="Foto Arya"/></div>`;
+  const container = document.getElementById('hero-photo-container');
+  const wrapper = makeNode('div', 'hero-photo-wrap');
+  const img = makeNode('img');
+  img.alt = 'Foto Arya';
+  if (!setSafeImage(img, url)) {
+    container.replaceChildren();
+    return;
+  }
+  wrapper.appendChild(img);
+  container.replaceChildren(wrapper);
 }
 
 // ---- LOAD ALL DATA (public view) ----
 async function loadAllData() {
-  // Load profil - try to get any profile (newest) since we may not have user
   const { data: profiles } = await sb.from('profiles').select('*').limit(1);
   if (profiles && profiles.length > 0) applyProfil(profiles[0]);
 
@@ -780,12 +918,10 @@ async function loadAllData() {
   const { data: skills } = await sb.from('keahlian').select('*');
   renderSkillsGrid(skills || []);
 
-  // Update stats otomatis dari data
   const jumlahProduk = (produk || []).length;
   const jumlahSertifikat = (certs || []).length;
   const jumlahPengalaman = (exp || []).length;
   document.getElementById('stat-produk').textContent = jumlahProduk > 0 ? jumlahProduk + '+' : '—';
-  // Angka diambil dari baris ringkasan "N Sertifikat Bidang Kesehatan" di database (angka terverifikasi); jika tidak ada, pakai jumlah baris.
   const ringkasanSert = (certs || []).map(c => /^\s*(\d+)\s+Sertifikat/i.exec(c.nama || '')).find(Boolean);
   document.getElementById('stat-sertifikat').textContent = ringkasanSert ? ringkasanSert[1] : (jumlahSertifikat > 0 ? jumlahSertifikat + '+' : '—');
   document.getElementById('stat-pengalaman').textContent = jumlahPengalaman > 0 ? jumlahPengalaman + '+' : '—';
@@ -799,84 +935,151 @@ function formatWA(num) {
 
 function applyProfil(p) {
   if (p.nama) {
-    document.getElementById('hero-nama').innerHTML = p.nama + (p.nama.includes('—') ? '' : ' <em>Medical Records &amp; Health Informatics Professional</em>');
-    
+    const name = document.getElementById('hero-nama');
+    name.replaceChildren(document.createTextNode(String(p.nama)));
+    if (!String(p.nama).includes('—')) {
+      const role = makeNode('em', '', 'Medical Records & Health Informatics Professional');
+      name.appendChild(document.createTextNode(' '));
+      name.appendChild(role);
+    }
   }
   if (p.tagline) document.getElementById('hero-tagline').textContent = p.tagline;
   if (p.bio) document.getElementById('hero-bio').textContent = p.bio;
   if (p.email) {
-    document.querySelector('#contact-links a:first-child').href = 'mailto:' + p.email;
-    document.getElementById('contact-email-sub').textContent = p.email;
+    const email = String(p.email).trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.querySelector('#contact-links a:first-child').href = 'mailto:' + email;
+      document.getElementById('contact-email-sub').textContent = email;
+    }
   }
   if (p.whatsapp) {
-    document.getElementById('contact-wa').href = 'https://wa.me/' + p.whatsapp;
-    document.getElementById('contact-wa-sub').textContent = formatWA(p.whatsapp);
+    const number = String(p.whatsapp).replace(/\D/g, '');
+    if (number.length >= 8 && number.length <= 15) {
+      document.getElementById('contact-wa').href = 'https://wa.me/' + number;
+      document.getElementById('contact-wa-sub').textContent = formatWA(number);
+    }
   }
   if (p.linkedin) {
     const li = String(p.linkedin).trim().replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/[\/?#].*$/, '');
-    document.getElementById('contact-li').href = 'https://www.linkedin.com/in/' + li;
-    document.getElementById('contact-li-sub').textContent = 'in/' + li;
+    if (/^[a-z0-9-]+$/i.test(li)) {
+      document.getElementById('contact-li').href = 'https://www.linkedin.com/in/' + li;
+      document.getElementById('contact-li-sub').textContent = 'in/' + li;
+    }
   }
   if (p.foto_url) renderHeroPhoto(p.foto_url);
 }
 
 function renderProdukGrid(data) {
   const el = document.getElementById('produk-grid');
-  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada produk. Tambahkan di admin panel.</div>'; return; }
-  el.innerHTML = data.map(p => `
-    <div class="product-card">
-      <div class="product-thumb">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
-      </div>
-      <div class="product-body">
-        <p class="product-name">${p.nama||''}</p>
-        <p class="product-desc">${p.deskripsi||''}</p>
-        <div class="product-footer">
-          <div class="product-tags">${(p.tags||'').split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div>
-          ${p.link ? `<a href="${p.link}" class="product-link" target="_blank">Demo →</a>` : ''}
-        </div>
-      </div>
-    </div>`).join('');
+  if (!data.length) { renderEmpty(el, 'Belum ada produk. Tambahkan di admin panel.'); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(p => {
+    const card = makeNode('div', 'product-card');
+    const thumb = makeNode('div', 'product-thumb');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.5');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18');
+    svg.appendChild(path);
+    thumb.appendChild(svg);
+    const body = makeNode('div', 'product-body');
+    body.appendChild(makeNode('p', 'product-name', p.nama || ''));
+    body.appendChild(makeNode('p', 'product-desc', p.deskripsi || ''));
+    const footer = makeNode('div', 'product-footer');
+    const tags = makeNode('div', 'product-tags');
+    appendTags(tags, p.tags);
+    footer.appendChild(tags);
+    if (p.link) {
+      const link = makeNode('a', 'product-link', 'Demo →');
+      if (setSafeLink(link, p.link)) footer.appendChild(link);
+    }
+    body.appendChild(footer);
+    card.append(thumb, body);
+    fragment.appendChild(card);
+  });
+  el.replaceChildren(fragment);
 }
 
 function renderExpList(data) {
   const el = document.getElementById('exp-list');
-  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada data pengalaman.</div>'; return; }
-  el.innerHTML = data.map(e => `
-    <div class="exp-item">
-      <div class="exp-year">${e.tahun||''}</div>
-      <div class="exp-content">
-        <p class="exp-role">${e.peran||''}</p>
-        <p class="exp-org">${e.organisasi||''}</p>
-        <p class="exp-desc">${e.deskripsi||''}</p>
-        <div class="exp-tags">${(e.tags||'').split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div>
-      </div>
-    </div>`).join('');
+  if (!data.length) { renderEmpty(el, 'Belum ada data pengalaman.'); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(e => {
+    const item = makeNode('div', 'exp-item');
+    const content = makeNode('div', 'exp-content');
+    item.appendChild(makeNode('div', 'exp-year', e.tahun || ''));
+    content.appendChild(makeNode('p', 'exp-role', e.peran || ''));
+    content.appendChild(makeNode('p', 'exp-org', e.organisasi || ''));
+    content.appendChild(makeNode('p', 'exp-desc', e.deskripsi || ''));
+    const tags = makeNode('div', 'exp-tags');
+    appendTags(tags, e.tags);
+    content.appendChild(tags);
+    item.appendChild(content);
+    fragment.appendChild(item);
+  });
+  el.replaceChildren(fragment);
 }
 
 function renderCertGrid(data) {
   const el = document.getElementById('certs-grid');
-  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada sertifikat.</div>'; return; }
-  el.innerHTML = data.map(c => `
-    <div class="cert-item">
-      <div class="cert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-      <div class="cert-info">
-        <p class="cert-name">${c.nama||''}</p>
-        <p class="cert-meta">${c.meta||''}</p>
-        ${c.file_url ? `<a href="${c.file_url}" target="_blank" style="font-size:.75rem;color:var(--accent);border:1px solid var(--border2);padding:2px 10px;border-radius:99px;display:inline-block;margin-top:5px;transition:all .2s" onmouseover="this.style.background='var(--primary)';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='var(--accent)'">📄 Lihat File</a>` : ''}
-      </div>
-      <span class="cert-badge ${c.status||'aktif'}">${c.status||'aktif'}</span>
-    </div>`).join('');
+  if (!data.length) { renderEmpty(el, 'Belum ada sertifikat.'); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(c => {
+    const item = makeNode('div', 'cert-item');
+    const icon = makeNode('div', 'cert-icon');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.5');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M22 11.08V12a10 10 0 1 1-5.93-9.14');
+    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    polyline.setAttribute('points', '22 4 12 14.01 9 11.01');
+    svg.append(path, polyline);
+    icon.appendChild(svg);
+    const info = makeNode('div', 'cert-info');
+    info.appendChild(makeNode('p', 'cert-name', c.nama || ''));
+    info.appendChild(makeNode('p', 'cert-meta', c.meta || ''));
+    if (c.file_url) {
+      const link = makeNode('a', 'cert-file-link', '📄 Lihat File');
+      if (setSafeLink(link, c.file_url)) {
+        link.style.fontSize = '.75rem';
+        link.style.color = 'var(--accent)';
+        link.style.border = '1px solid var(--border2)';
+        link.style.padding = '2px 10px';
+        link.style.borderRadius = '99px';
+        link.style.display = 'inline-block';
+        link.style.marginTop = '5px';
+        link.style.transition = 'all .2s';
+        info.appendChild(link);
+      }
+    }
+    const status = ['aktif', 'selesai'].includes(String(c.status || '').toLowerCase()) ? String(c.status).toLowerCase() : 'aktif';
+    item.append(icon, info, makeNode('span', 'cert-badge ' + status, status));
+    fragment.appendChild(item);
+  });
+  el.replaceChildren(fragment);
 }
 
 function renderSkillsGrid(data) {
   const el = document.getElementById('skills-grid');
-  if (!data.length) { el.innerHTML = '<div class="empty-state">Belum ada keahlian.</div>'; return; }
-  el.innerHTML = data.map(s => `
-    <div class="skill-group">
-      <p class="skill-group-title">${s.grup||''}</p>
-      <ul class="skill-list">${(s.items||'').split('\n').filter(i=>i.trim()).map(i=>`<li>${i.trim()}</li>`).join('')}</ul>
-    </div>`).join('');
+  if (!data.length) { renderEmpty(el, 'Belum ada keahlian.'); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(s => {
+    const group = makeNode('div', 'skill-group');
+    group.appendChild(makeNode('p', 'skill-group-title', s.grup || ''));
+    const list = makeNode('ul', 'skill-list');
+    String(s.items || '').split('\n').filter(item => item.trim()).forEach(item => {
+      list.appendChild(makeNode('li', '', item.trim()));
+    });
+    group.appendChild(list);
+    fragment.appendChild(group);
+  });
+  el.replaceChildren(fragment);
 }
 
 // ---- ADMIN DATA LOAD ----
@@ -884,125 +1087,123 @@ async function loadAdminData() {
   if (!currentUser) return;
   const { data: p } = await sb.from('profiles').select('*').eq('user_id', currentUser.id).single();
   if (p) {
-    document.getElementById('p-nama').value = p.nama||'';
-    document.getElementById('p-tagline').value = p.tagline||'';
-    document.getElementById('p-bio').value = p.bio||'';
-    document.getElementById('p-email').value = p.email||'';
-    document.getElementById('p-whatsapp').value = p.whatsapp||'';
-    document.getElementById('p-linkedin').value = p.linkedin||'';
+    document.getElementById('p-nama').value = p.nama || '';
+    document.getElementById('p-tagline').value = p.tagline || '';
+    document.getElementById('p-bio').value = p.bio || '';
+    document.getElementById('p-email').value = p.email || '';
+    document.getElementById('p-whatsapp').value = p.whatsapp || '';
+    document.getElementById('p-linkedin').value = p.linkedin || '';
     if (p.foto_url) renderFotoPreview(p.foto_url);
   }
   const { data: produk } = await sb.from('produk').select('*').eq('user_id', currentUser.id).order('urutan');
-  renderAdminProduk(produk||[]);
+  renderAdminProduk(produk || []);
   const { data: exp } = await sb.from('pengalaman').select('*').eq('user_id', currentUser.id).order('urutan');
-  renderAdminPengalaman(exp||[]);
+  renderAdminPengalaman(exp || []);
   const { data: certs } = await sb.from('sertifikat').select('*').eq('user_id', currentUser.id);
-  renderAdminSertifikat(certs||[]);
+  renderAdminSertifikat(certs || []);
   const { data: skills } = await sb.from('keahlian').select('*').eq('user_id', currentUser.id);
-  renderAdminKeahlian(skills||[]);
+  renderAdminKeahlian(skills || []);
 }
 
 // ---- ADMIN RENDERS ----
 function renderAdminProduk(data) {
   const el = document.getElementById('produk-list');
-  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada produk.</div>'; return; }
-  el.innerHTML = data.map(p => `
-    <div class="card-item" id="produk-card-${p.id}">
-      <div class="card-item-header">
-        <div><p class="card-item-title">${p.nama||''}</p><p class="card-item-sub">${(p.tags||'').split(',').slice(0,3).join(' · ')}</p></div>
-        <div class="card-item-actions">
-          <button class="icon-btn" onclick="toggleEdit('produk','${p.id}')">✎</button>
-          <button class="icon-btn del" onclick="deleteItem('produk','${p.id}')">✕</button>
-        </div>
-      </div>
-      <p style="font-size:.83rem;color:var(--muted)">${p.deskripsi||''}</p>
-      <div id="edit-produk-${p.id}" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-        <div class="field-row">
-          <div class="field-group"><label>Nama</label><input id="ep-nama-${p.id}" value="${(p.nama||'').replace(/"/g,'&quot;')}"/></div>
-          <div class="field-group"><label>Link</label><input id="ep-link-${p.id}" value="${(p.link||'').replace(/"/g,'&quot;')}"/></div>
-        </div>
-        <div class="field-group"><label>Deskripsi</label><textarea id="ep-desc-${p.id}">${p.deskripsi||''}</textarea></div>
-        <div class="field-group"><label>Tags</label><input id="ep-tags-${p.id}" value="${(p.tags||'').replace(/"/g,'&quot;')}"/></div>
-        <button class="btn-save" onclick="saveEdit('produk','${p.id}')">Simpan</button>
-        <button class="btn-cancel" onclick="toggleEdit('produk','${p.id}')">Batal</button>
-      </div>
-    </div>`).join('');
+  addAdminActionDelegation(el);
+  if (!data.length) { renderEmpty(el, 'Belum ada produk.', true); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(p => {
+    const card = createAdminCard('produk', p.id, p.nama || '', String(p.tags || '').split(',').slice(0, 3).join(' · '));
+    card.appendChild(makeNode('p', '', p.deskripsi || ''));
+    const panel = createEditPanel('produk', p.id);
+    const row = makeNode('div', 'field-row');
+    addAdminFieldRow(row, [
+      {label:'Nama', id:'ep-nama-' + p.id, value:p.nama},
+      {label:'Link', id:'ep-link-' + p.id, value:p.link}
+    ]);
+    panel.appendChild(row);
+    addAdminField(panel, 'Deskripsi', 'ep-desc-' + p.id, p.deskripsi, 'textarea');
+    addAdminField(panel, 'Tags', 'ep-tags-' + p.id, p.tags);
+    addEditActions(panel, 'produk', p.id);
+    card.appendChild(panel);
+    fragment.appendChild(card);
+  });
+  el.replaceChildren(fragment);
 }
 
 function renderAdminPengalaman(data) {
   const el = document.getElementById('pengalaman-list');
-  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada pengalaman.</div>'; return; }
-  el.innerHTML = data.map(e => `
-    <div class="card-item" id="pengalaman-card-${e.id}">
-      <div class="card-item-header">
-        <div><p class="card-item-title">${e.peran||''}</p><p class="card-item-sub">${e.organisasi||''} · ${e.tahun||''}</p></div>
-        <div class="card-item-actions">
-          <button class="icon-btn" onclick="toggleEdit('pengalaman','${e.id}')">✎</button>
-          <button class="icon-btn del" onclick="deleteItem('pengalaman','${e.id}')">✕</button>
-        </div>
-      </div>
-      <div id="edit-pengalaman-${e.id}" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-        <div class="field-row">
-          <div class="field-group"><label>Tahun</label><input id="ee-tahun-${e.id}" value="${(e.tahun||'').replace(/"/g,'&quot;')}"/></div>
-          <div class="field-group"><label>Peran</label><input id="ee-peran-${e.id}" value="${(e.peran||'').replace(/"/g,'&quot;')}"/></div>
-        </div>
-        <div class="field-group"><label>Organisasi</label><input id="ee-org-${e.id}" value="${(e.organisasi||'').replace(/"/g,'&quot;')}"/></div>
-        <div class="field-group"><label>Deskripsi</label><textarea id="ee-desc-${e.id}">${e.deskripsi||''}</textarea></div>
-        <div class="field-group"><label>Tags</label><input id="ee-tags-${e.id}" value="${(e.tags||'').replace(/"/g,'&quot;')}"/></div>
-        <button class="btn-save" onclick="saveEdit('pengalaman','${e.id}')">Simpan</button>
-        <button class="btn-cancel" onclick="toggleEdit('pengalaman','${e.id}')">Batal</button>
-      </div>
-    </div>`).join('');
+  addAdminActionDelegation(el);
+  if (!data.length) { renderEmpty(el, 'Belum ada pengalaman.', true); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(e => {
+    const card = createAdminCard('pengalaman', e.id, e.peran || '', (e.organisasi || '') + ' · ' + (e.tahun || ''));
+    const panel = createEditPanel('pengalaman', e.id);
+    const row = makeNode('div', 'field-row');
+    addAdminFieldRow(row, [
+      {label:'Tahun', id:'ee-tahun-' + e.id, value:e.tahun},
+      {label:'Peran', id:'ee-peran-' + e.id, value:e.peran}
+    ]);
+    panel.appendChild(row);
+    addAdminField(panel, 'Organisasi', 'ee-org-' + e.id, e.organisasi);
+    addAdminField(panel, 'Deskripsi', 'ee-desc-' + e.id, e.deskripsi, 'textarea');
+    addAdminField(panel, 'Tags', 'ee-tags-' + e.id, e.tags);
+    addEditActions(panel, 'pengalaman', e.id);
+    card.appendChild(panel);
+    fragment.appendChild(card);
+  });
+  el.replaceChildren(fragment);
 }
 
 function renderAdminSertifikat(data) {
   const el = document.getElementById('sertifikat-list');
-  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada sertifikat.</div>'; return; }
-  el.innerHTML = data.map(c => `
-    <div class="card-item" id="sertifikat-card-${c.id}">
-      <div class="card-item-header">
-        <div><p class="card-item-title">${c.nama||''}</p><p class="card-item-sub">${c.meta||''} · <span class="cert-badge ${c.status}">${c.status}</span></p></div>
-        <div class="card-item-actions">
-          <button class="icon-btn" onclick="toggleEdit('sertifikat','${c.id}')">✎</button>
-          <button class="icon-btn del" onclick="deleteItem('sertifikat','${c.id}')">✕</button>
-        </div>
-      </div>
-      <div id="edit-sertifikat-${c.id}" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-        <div class="field-row">
-          <div class="field-group"><label>Nama</label><input id="ec-nama-${c.id}" value="${(c.nama||'').replace(/"/g,'&quot;')}"/></div>
-          <div class="field-group"><label>Info</label><input id="ec-meta-${c.id}" value="${(c.meta||'').replace(/"/g,'&quot;')}"/></div>
-        </div>
-        <div class="field-group"><label>Status</label>
-          <select id="ec-status-${c.id}">
-            <option value="aktif" ${c.status==='aktif'?'selected':''}>Aktif</option>
-            <option value="selesai" ${c.status==='selesai'?'selected':''}>Selesai</option>
-          </select>
-        </div>
-        <button class="btn-save" onclick="saveEdit('sertifikat','${c.id}')">Simpan</button>
-        <button class="btn-cancel" onclick="toggleEdit('sertifikat','${c.id}')">Batal</button>
-      </div>
-    </div>`).join('');
+  addAdminActionDelegation(el);
+  if (!data.length) { renderEmpty(el, 'Belum ada sertifikat.', true); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(c => {
+    const status = ['aktif', 'selesai'].includes(String(c.status || '').toLowerCase()) ? String(c.status).toLowerCase() : 'aktif';
+    const card = createAdminCard('sertifikat', c.id, c.nama || '', (c.meta || '') + ' · ' + status);
+    const panel = createEditPanel('sertifikat', c.id);
+    const row = makeNode('div', 'field-row');
+    addAdminFieldRow(row, [
+      {label:'Nama', id:'ec-nama-' + c.id, value:c.nama},
+      {label:'Info', id:'ec-meta-' + c.id, value:c.meta}
+    ]);
+    panel.appendChild(row);
+    const group = makeNode('div', 'field-group');
+    group.appendChild(makeNode('label', '', 'Status'));
+    const select = makeNode('select');
+    select.id = 'ec-status-' + c.id;
+    [['aktif','Aktif'],['selesai','Selesai']].forEach(([value,label]) => {
+      const option = makeNode('option', '', label);
+      option.value = value;
+      option.selected = status === value;
+      select.appendChild(option);
+    });
+    group.appendChild(select);
+    panel.appendChild(group);
+    addEditActions(panel, 'sertifikat', c.id);
+    card.appendChild(panel);
+    fragment.appendChild(card);
+  });
+  el.replaceChildren(fragment);
 }
 
 function renderAdminKeahlian(data) {
   const el = document.getElementById('keahlian-list');
-  if (!data.length) { el.innerHTML = '<div class="empty-state" style="text-align:left;padding:1rem 0">Belum ada keahlian.</div>'; return; }
-  el.innerHTML = data.map(s => `
-    <div class="card-item" id="keahlian-card-${s.id}">
-      <div class="card-item-header">
-        <div><p class="card-item-title">${s.grup||''}</p><p class="card-item-sub">${(s.items||'').split('\n').filter(i=>i.trim()).length} item</p></div>
-        <div class="card-item-actions">
-          <button class="icon-btn" onclick="toggleEdit('keahlian','${s.id}')">✎</button>
-          <button class="icon-btn del" onclick="deleteItem('keahlian','${s.id}')">✕</button>
-        </div>
-      </div>
-      <div id="edit-keahlian-${s.id}" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-        <div class="field-group"><label>Nama Grup</label><input id="es-grup-${s.id}" value="${(s.grup||'').replace(/"/g,'&quot;')}"/></div>
-        <div class="field-group"><label>Item (satu per baris)</label><textarea id="es-items-${s.id}">${s.items||''}</textarea></div>
-        <button class="btn-save" onclick="saveEdit('keahlian','${s.id}')">Simpan</button>
-        <button class="btn-cancel" onclick="toggleEdit('keahlian','${s.id}')">Batal</button>
-      </div>
-    </div>`).join('');
+  addAdminActionDelegation(el);
+  if (!data.length) { renderEmpty(el, 'Belum ada keahlian.', true); return; }
+  const fragment = document.createDocumentFragment();
+  data.forEach(skill => {
+    const count = String(skill.items || '').split('\n').filter(item => item.trim()).length;
+    const card = createAdminCard('keahlian', skill.id, skill.grup || '', count + ' item');
+    const panel = createEditPanel('keahlian', skill.id);
+    addAdminField(panel, 'Nama Grup', 'es-grup-' + skill.id, skill.grup);
+    addAdminField(panel, 'Item (satu per baris)', 'es-items-' + skill.id, skill.items, 'textarea');
+    addEditActions(panel, 'keahlian', skill.id);
+    card.appendChild(panel);
+    fragment.appendChild(card);
+  });
+  el.replaceChildren(fragment);
 }
 
 // ---- TOGGLE & SAVE EDIT ----
