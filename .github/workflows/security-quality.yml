@@ -55,7 +55,7 @@ jobs:
       - name: Install Semgrep
         run: python -m pip install --disable-pip-version-check semgrep
       - name: Run Semgrep SAST
-        run: semgrep scan --config p/security-audit --sarif --output semgrep.sarif --metrics=off
+        run: semgrep scan --error --config p/security-audit --sarif --output semgrep.sarif --metrics=off
       - name: Upload Semgrep report
         if: always()
         uses: actions/upload-artifact@v4
