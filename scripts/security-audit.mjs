@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const target = 'index.html';
 if (!fs.existsSync(target)) {
@@ -7,6 +8,17 @@ if (!fs.existsSync(target)) {
   process.exit(2);
 }
 const source = fs.readFileSync(target, 'utf8');
+const inlineScripts = [...source.matchAll(/<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+for (const [index, match] of inlineScripts.entries()) {
+  try {
+    new vm.Script(match[1], { filename: `index.html:inline-script-${index + 1}` });
+  } catch (error) {
+    console.error(`Inline JavaScript syntax error in script ${index + 1}: ${error.message}`);
+    process.exit(1);
+  }
+}
+console.log(`JavaScript syntax: ${inlineScripts.length} inline script(s) parsed successfully.`);
+
 const rules = [
   { id: 'DOM-XSS-INNERHTML', severity: 'HIGH', re: /\\.innerHTML\\s*=/g, message: 'innerHTML assignment: use DOM APIs and textContent for untrusted data.' },
   { id: 'INLINE-EVENT-HANDLER', severity: 'MEDIUM', re: /\\son(?:click|change|input|submit|mouseover|mouseout|error|load)\\s*=/gi, message: 'Inline event handler: register listeners with addEventListener.' },
