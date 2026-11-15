@@ -300,8 +300,8 @@
     <h2 class="auth-title">Masuk ke Panel Admin</h2>
     <p class="auth-sub">Kelola semua konten portfolio kamu dari sini.</p>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Masuk</button>
-      <button class="auth-tab" onclick="switchAuthTab('register')">Daftar</button>
+      <button class="auth-tab active" data-action="switch-auth-tab" data-tab="login">Masuk</button>
+      <button class="auth-tab" data-action="switch-auth-tab" data-tab="register">Daftar</button>
     </div>
     <div id="auth-msg" class="auth-msg"></div>
     <div class="form-group">
@@ -312,9 +312,9 @@
       <label>Password</label>
       <input type="password" id="auth-password" placeholder="Min. 6 karakter"/>
     </div>
-    <button class="btn-full" onclick="handleAuth()" id="auth-btn">Masuk</button>
+    <button class="btn-full" data-action="handle-auth" id="auth-btn">Masuk</button>
     <div style="margin-top:1.5rem;text-align:center">
-      <a href="#" onclick="closeAuth()" style="font-size:.82rem;color:var(--muted)">← Kembali ke portfolio</a>
+      <a href="#" data-action="close-auth" style="font-size:.82rem;color:var(--muted)">← Kembali ke portfolio</a>
     </div>
   </div>
 </div>
@@ -326,17 +326,17 @@
   <div class="admin-nav">
     <span class="admin-nav-logo">⚙ Admin Panel</span>
     <div class="admin-nav-right">
-      <button class="btn-sm" onclick="openPortfolio()">Lihat Portfolio</button>
-      <button class="btn-sm danger" onclick="handleLogout()">Keluar</button>
+      <button class="btn-sm" data-action="open-portfolio">Lihat Portfolio</button>
+      <button class="btn-sm danger" data-action="handle-logout">Keluar</button>
     </div>
   </div>
   <div class="admin-body">
     <div class="admin-tabs">
-      <button class="admin-tab active" onclick="switchAdminTab('profil')">Profil</button>
-      <button class="admin-tab" onclick="switchAdminTab('produk')">Produk</button>
-      <button class="admin-tab" onclick="switchAdminTab('pengalaman')">Pengalaman</button>
-      <button class="admin-tab" onclick="switchAdminTab('sertifikat')">Sertifikat</button>
-      <button class="admin-tab" onclick="switchAdminTab('keahlian')">Keahlian</button>
+      <button class="admin-tab active" data-action="switch-admin-tab" data-tab="profil">Profil</button>
+      <button class="admin-tab" data-action="switch-admin-tab" data-tab="produk">Produk</button>
+      <button class="admin-tab" data-action="switch-admin-tab" data-tab="pengalaman">Pengalaman</button>
+      <button class="admin-tab" data-action="switch-admin-tab" data-tab="sertifikat">Sertifikat</button>
+      <button class="admin-tab" data-action="switch-admin-tab" data-tab="keahlian">Keahlian</button>
     </div>
 
     <!-- PROFIL -->
@@ -346,7 +346,7 @@
         <p style="font-size:.78rem;color:var(--muted);margin-bottom:8px;font-weight:500;letter-spacing:.03em">FOTO PROFIL</p>
         <div id="foto-preview-wrap" style="margin-bottom:10px"></div>
         <div class="upload-area" id="upload-area">
-          <input type="file" accept="image/*" onchange="handleFotoUpload(event)"/>
+          <input type="file" accept="image/*" data-action="handle-foto-upload"/>
           <strong>Klik untuk upload foto</strong>
           <p>JPG, PNG · Maks 2MB · Rasio 5:6 disarankan</p>
         </div>
@@ -362,7 +362,7 @@
         <div class="field-group"><label>WhatsApp (nomor internasional)</label><input type="text" id="p-whatsapp" placeholder="6281234567890"/></div>
       </div>
       <div class="field-group"><label>LinkedIn (bagian akhir alamat setelah /in/)</label><input type="text" id="p-linkedin" placeholder="said-ariyandi-8ab51040a"/></div>
-      <button class="btn-save" onclick="saveProfil()">Simpan Profil</button>
+      <button class="btn-save" data-action="save-profil">Simpan Profil</button>
     </div>
 
     <!-- PRODUK -->
@@ -377,7 +377,7 @@
         </div>
         <div class="field-group"><label>Deskripsi</label><textarea id="new-produk-desc" placeholder="Deskripsi singkat produk..."></textarea></div>
         <div class="field-group"><label>Tags (pisah koma)</label><input type="text" id="new-produk-tags" placeholder="ICD-10, HTML, No-Code"/></div>
-        <button class="btn-save" onclick="addProduk()">Tambah</button>
+        <button class="btn-save" data-action="add-produk">Tambah</button>
       </div>
     </div>
 
@@ -394,7 +394,7 @@
         <div class="field-group"><label>Organisasi / Instansi</label><input type="text" id="new-exp-org" placeholder="RS. Contoh, Makassar"/></div>
         <div class="field-group"><label>Deskripsi</label><textarea id="new-exp-desc" placeholder="Uraian singkat tanggung jawab..."></textarea></div>
         <div class="field-group"><label>Tags (pisah koma)</label><input type="text" id="new-exp-tags" placeholder="ICD-10, BPJS, Rekam Medis"/></div>
-        <button class="btn-save" onclick="addPengalaman()">Tambah</button>
+        <button class="btn-save" data-action="add-pengalaman">Tambah</button>
       </div>
     </div>
 
@@ -418,12 +418,12 @@
         <div class="field-group">
           <label>File Sertifikat (PDF / JPG / PNG · Maks 5MB)</label>
           <div class="upload-area">
-            <input type="file" id="new-cert-file" accept=".pdf,.jpg,.jpeg,.png" onchange="previewCertFile(event)"/>
+            <input type="file" id="new-cert-file" accept=".pdf,.jpg,.jpeg,.png" data-action="preview-cert-file"/>
             <strong>Klik untuk pilih file</strong>
             <p id="cert-file-name" style="margin-top:4px">Belum ada file dipilih</p>
           </div>
         </div>
-        <button class="btn-save" onclick="addSertifikat()">Tambah</button>
+        <button class="btn-save" data-action="add-sertifikat">Tambah</button>
       </div>
     </div>
 
@@ -435,7 +435,7 @@
         <p class="add-card-title">+ Tambah Grup Keahlian</p>
         <div class="field-group"><label>Nama Grup</label><input type="text" id="new-skill-grup" placeholder="Rekam Medis"/></div>
         <div class="field-group"><label>Item Keahlian (satu per baris)</label><textarea id="new-skill-items" placeholder="Koding ICD-10&#10;Verifikasi BPJS&#10;Rekam medis rawat inap"></textarea></div>
-        <button class="btn-save" onclick="addKeahlian()">Tambah</button>
+        <button class="btn-save" data-action="add-keahlian">Tambah</button>
       </div>
     </div>
 
@@ -457,10 +457,10 @@
         <li><a href="#keahlian">Keahlian</a></li>
       </ul>
       <div class="nav-right">
-        <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle tema">☀</button>
-        <button class="nav-admin-btn" id="nav-admin-btn" onclick="openAdmin()">Admin</button>
+        <button class="theme-btn" data-action="toggle-theme" aria-label="Toggle tema">☀</button>
+        <button class="nav-admin-btn" id="nav-admin-btn" data-action="open-admin">Admin</button>
         <a href="#kontak" class="nav-cta">Hubungi Saya</a>
-        <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+        <button class="hamburger" id="hamburger" data-action="toggle-mobile-menu" aria-label="Menu">
           <span></span><span></span><span></span>
         </button>
       </div>
@@ -469,14 +469,14 @@
 
   <!-- MOBILE MENU -->
   <div class="mobile-menu" id="mobile-menu">
-    <a href="#pengalaman" onclick="closeMobileMenu()">Pengalaman</a>
-    <a href="#produk" onclick="closeMobileMenu()">Produk</a>
-    <a href="#sertifikat" onclick="closeMobileMenu()">Sertifikat</a>
-    <a href="#keahlian" onclick="closeMobileMenu()">Keahlian</a>
-    <a href="#kontak" onclick="closeMobileMenu()">Kontak</a>
+    <a href="#pengalaman" data-action="close-mobile-menu">Pengalaman</a>
+    <a href="#produk" data-action="close-mobile-menu">Produk</a>
+    <a href="#sertifikat" data-action="close-mobile-menu">Sertifikat</a>
+    <a href="#keahlian" data-action="close-mobile-menu">Keahlian</a>
+    <a href="#kontak" data-action="close-mobile-menu">Kontak</a>
     <div class="mobile-menu-actions">
-      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle tema">☀</button>
-      <button class="nav-admin-btn" onclick="closeMobileMenu();openAdmin();">Admin</button>
+      <button class="theme-btn" data-action="toggle-theme" aria-label="Toggle tema">☀</button>
+      <button class="nav-admin-btn" data-action="mobile-admin">Admin</button>
     </div>
   </div>
 
@@ -1214,7 +1214,7 @@ function toggleEdit(table, id) {
 
 async function saveEdit(table, id) {
   if (!currentUser) { showToast('Sesi habis, silakan login ulang'); return; }
-  const btn = document.querySelector(`#edit-${table}-${id} .btn-save`);
+  const panel = document.getElementById(`edit-${table}-${id}`);\n  if (!panel) return;\n  const btn = panel.querySelector('.btn-save');
   setLoading(btn, true, 'Simpan');
   let payload = {};
   if (table === 'produk') {
@@ -1413,6 +1413,39 @@ function closeMobileMenu() {
   document.getElementById('mobile-menu').classList.remove('open');
   document.getElementById('hamburger').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// ---- STATIC EVENT DELEGATION ----
+function bindStaticActions() {
+  document.addEventListener('click', event => {
+    const control = event.target.closest('[data-action]');
+    if (!control) return;
+    const action = control.dataset.action;
+    switch (action) {
+      case 'switch-auth-tab': switchAuthTab(control.dataset.tab); break;
+      case 'handle-auth': handleAuth(); break;
+      case 'close-auth': event.preventDefault(); closeAuth(); break;
+      case 'open-portfolio': openPortfolio(); break;
+      case 'handle-logout': handleLogout(); break;
+      case 'switch-admin-tab': switchAdminTab(control.dataset.tab); break;
+      case 'save-profil': saveProfil(); break;
+      case 'add-produk': addProduk(); break;
+      case 'add-pengalaman': addPengalaman(); break;
+      case 'add-sertifikat': addSertifikat(); break;
+      case 'add-keahlian': addKeahlian(); break;
+      case 'toggle-theme': toggleTheme(); break;
+      case 'open-admin': openAdmin(); break;
+      case 'toggle-mobile-menu': toggleMobileMenu(); break;
+      case 'close-mobile-menu': closeMobileMenu(); break;
+      case 'mobile-admin': closeMobileMenu(); openAdmin(); break;
+    }
+  });
+  document.addEventListener('change', event => {
+    const control = event.target.closest('[data-action]');
+    if (!control) return;
+    if (control.dataset.action === 'handle-foto-upload') handleFotoUpload(event);
+    if (control.dataset.action === 'preview-cert-file') previewCertFile(event);
+  });
 }
 
 // ---- START ----
