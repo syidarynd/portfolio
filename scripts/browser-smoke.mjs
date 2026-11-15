@@ -29,10 +29,14 @@ try {
       body: document.body.scrollWidth
     }));
     layoutResults.push(metrics);
-    assert.ok(
-      metrics.document <= metrics.viewport + 1 && metrics.body <= metrics.viewport + 1,
-      `Horizontal overflow at viewport ${width}px: ${JSON.stringify(metrics)}`
-    );
+    if (metrics.document > metrics.viewport + 1 || metrics.body > metrics.viewport + 1) {
+      const offenders = await page.evaluate(() => [...document.querySelectorAll('body *')].map(el => {
+        const rect = el.getBoundingClientRect();
+        return { tag: el.tagName, id: el.id, className: typeof el.className === 'string' ? el.className : '', right: Math.round(rect.right), left: Math.round(rect.left), width: Math.round(rect.width), text: (el.textContent || '').trim().slice(0, 70) };
+      }).filter(el => el.width > 0 && (el.right > window.innerWidth + 1 || el.left < -1)).sort((a,b) => b.right-a.right).slice(0, 12));
+      console.error('Overflow elements at ' + width + 'px: ' + JSON.stringify(offenders));
+      assert.fail(`Horizontal overflow at viewport ${width}px: ${JSON.stringify(metrics)}`);
+    }
   }
 
   assert.equal(pageErrors.length, 0, `Browser runtime errors: ${pageErrors.join(' | ')}`);
