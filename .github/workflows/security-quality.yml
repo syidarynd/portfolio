@@ -1,0 +1,55 @@
+name: Security & Quality
+
+on:
+  push:
+    branches: [main, 'automation/**']
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dom-audit:
+    name: DOM security audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run DOM security audit (report-only baseline)
+        run: node scripts/security-audit.mjs
+      - name: Upload DOM audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dom-security-audit
+          path: security-reports/dom-audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
