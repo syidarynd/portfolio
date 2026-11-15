@@ -851,9 +851,7 @@ function addAdminField(parent, labelText, id, value, type = 'input') {
 }
 
 function addAdminFieldRow(parent, fields) {
-  const row = makeNode('div', 'field-row');
-  fields.forEach(field => addAdminField(row, field.label, field.id, field.value));
-  parent.appendChild(row);
+  fields.forEach(field => addAdminField(parent, field.label, field.id, field.value));
 }
 
 function addEditActions(parent, table, itemId) {
@@ -1123,7 +1121,10 @@ function renderAdminProduk(data) {
   const fragment = document.createDocumentFragment();
   data.forEach(p => {
     const card = createAdminCard('produk', p.id, p.nama || '', String(p.tags || '').split(',').slice(0, 3).join(' · '));
-    card.appendChild(makeNode('p', '', p.deskripsi || ''));
+    const description = makeNode('p', '', p.deskripsi || '');
+    description.style.fontSize = '.83rem';
+    description.style.color = 'var(--muted)';
+    card.appendChild(description);
     const panel = createEditPanel('produk', p.id);
     const row = makeNode('div', 'field-row');
     addAdminFieldRow(row, [
