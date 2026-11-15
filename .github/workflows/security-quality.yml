@@ -33,7 +33,7 @@ jobs:
           STRICT_SECURITY: '1'
       - name: Upload DOM audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dom-security-audit
           path: security-reports/dom-audit.json
@@ -58,7 +58,7 @@ jobs:
         run: semgrep scan --error --config p/security-audit --sarif --output semgrep.sarif --metrics=off
       - name: Upload Semgrep report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: semgrep-sast
           path: semgrep.sarif
