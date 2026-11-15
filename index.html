@@ -76,7 +76,12 @@
     .field-group input:focus,.field-group textarea:focus{outline:none;border-color:var(--primary)}
     .field-group textarea{min-height:80px}
     .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media(max-width:540px){.field-row{grid-template-columns:1fr}}
+    @media(max-width:540px){
+      .field-row{grid-template-columns:1fr}
+      .contact-wrap{padding:1.5rem 1rem}
+      .contact-btn{min-width:0;flex-wrap:wrap;padding:12px 14px}
+      .contact-btn-sub{min-width:0;flex-basis:100%;margin-left:30px;overflow-wrap:anywhere}
+    }
 
     .card-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;margin-bottom:.75rem;position:relative}
     .card-item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
